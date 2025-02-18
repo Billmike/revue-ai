@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RevueAI</title>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="libs/toastify.css">
+  <style>
+    :root {
+      /* Color System */
+      --background: #f8fafc;
+      --surface: #ffffff;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --secondary: #f1f5f9;
+      --secondary-hover: #e2e8f0;
+      --error: #ef4444;
+      --error-light: #fee2e2;
+      --text-primary: #1e293b;
+      --text-secondary: #64748b;
+      --border: #e2e8f0;
+      
+      /* Shadows */
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      
+      /* Animation */
+      --transition: all 0.2s ease;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 360px;
+      background: var(--background);
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      color: var(--text-primary);
+      padding: 1.5rem;
+    }
+
+    .container {
+      background: var(--surface);
+      border-radius: 1rem;
+      padding: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-bottom: 1.5rem;
+    }
+
+    .logo-container {
+      width: 40px;
+      height: 40px;
+      background: var(--primary);
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo-container svg {
+      width: 42px;
+      height: 42px;
+      color: var(--primary);
+    }
+
+    h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-primary);
+      margin: 0;
+    }
+
+    p {
+      color: var(--text-secondary);
+      font-size: 0.875rem;
+      margin-bottom: 1.5rem;
+      line-height: 1.5;
+    }
+
+    .button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 0.75rem;
+      width: 100%;
+    }
+
+    button {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: none;
+      border-radius: 0.5rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    button.primary {
+      background: var(--primary);
+      color: white;
+    }
+
+    button.primary:hover {
+      background: var(--primary-hover);
+    }
+
+    button.primary:disabled {
+      background: var(--secondary);
+      color: var(--text-secondary);
+      cursor: not-allowed;
+    }
+
+    button.secondary {
+      background: var(--secondary);
+      color: var(--text-primary);
+    }
+
+    button.secondary:hover {
+      background: var(--secondary-hover);
+    }
+
+    .input-group {
+      margin-bottom: 1rem;
+    }
+
+    .input-label {
+      display: block;
+      font-size: 0.875rem;
+      font-weight: 500;
+      color: var(--text-primary);
+      margin-bottom: 0.5rem;
+      text-align: left;
+    }
+
+    input {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      border: 1px solid var(--border);
+      border-radius: 0.5rem;
+      font-family: inherit;
+      font-size: 0.875rem;
+      color: var(--text-primary);
+      transition: var(--transition);
+      background: var(--surface);
+    }
+
+    input:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+
+    input.error {
+      border-color: var(--error);
+      background: var(--error-light);
+    }
+
+    input.error:focus {
+      box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.1);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+    }
+
+    .back-button {
+      background: none;
+      border: none;
+      padding: 0.5rem;
+      cursor: pointer;
+      color: var(--text-secondary);
+      width: auto;
+    }
+
+    .back-button:hover {
+      color: var(--text-primary);
+    }
+  </style>
+  <script src="libs/toastify.js"></script>
+</head>
+<body>
+  <!-- Main View -->
+  <div id="main-view" class="container">
+    <div class="header">
+      <div class="logo-container">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect x="8" y="8" width="64" height="64" rx="12" fill="currentColor"/>
+          <path d="M25 28L35 38L25 48M55 28L45 38L55 48" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M37 52L43 24" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1>RevueAI</h1>
+    </div>
+    <p>AI-powered code review assistant that helps improve your pull requests with intelligent suggestions.</p>
+    <div class="button-container">
+      <button id="run-review" class="primary">Run Review</button>
+      <button id="open-settings" class="secondary">Settings</button>
+    </div>
+  </div>
+
+  <!-- Settings View -->
+  <div id="settings-view" class="container" style="display: none;">
+    <div class="settings-header">
+      <h1>Settings</h1>
+      <button id="back-to-main" class="back-button">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M19 12H5m7 7-7-7 7-7"/>
+        </svg>
+      </button>
+    </div>
+    <div class="input-group">
+      <label class="input-label" for="githubToken">GitHub Token</label>
+      <input type="password" id="githubToken" placeholder="Enter your GitHub token" required />
+    </div>
+    <div class="input-group">
+      <label class="input-label" for="llmAPIKEY">LLM API Key</label>
+      <input type="password" id="llmAPIKEY" placeholder="Enter your LLM API key" required />
+    </div>
+    <div class="button-container">
+      <button id="saveToken" class="primary">Save Changes</button>
+    </div>
+  </div>
+
+  <script src="popup.js"></script>
+  <script src="settings.js"></script>
+  <script src="utils/security.js"></script>
+  <script src="utils/github/index.js"></script>
+  <script src="utils/llm/index.js"></script>
+</body>
+</html>
