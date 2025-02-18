@@ -28,16 +28,13 @@ document.getElementById("run-review").addEventListener("click", async () => {
 
       // Fetch PR diffs
      const diffs = await fetchPRDiffs(prDetails, githubToken);
-     console.log("PR Diff Data:", diffs);
 
      // Fetch the commit ID for the PR
      const commitId = await getPRCommitId(prDetails, githubToken);
-     console.log("Commit ID:", commitId);
 
      // Process all files concurrently using Promise.all()
      await Promise.all(
       diffs.map(async (file) => {
-        console.log(`Processing file: ${file.filename}`);
 
         try {
           // Analyze the diff using OpenAI
@@ -46,7 +43,6 @@ document.getElementById("run-review").addEventListener("click", async () => {
             showToast(suggestions.content, 'error');
             return;
           }
-          console.log(`AI Suggestions for ${file.filename}:`, suggestions);
 
           // Extract relevant line changes
           const changes = extractChangesFromDiff([file]);

@@ -29,7 +29,6 @@ async function analyzeDiffWithOpenAI(diffData) {
   const data = await response.json();
 
   if (data.error) {
-    console.error("OpenAI API Error:", data.error.message);
     return {
       type: 'error',
       content: `Error: ${data.error.message}`

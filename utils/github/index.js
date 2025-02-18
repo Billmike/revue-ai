@@ -20,7 +20,6 @@ async function fetchPRDiffs({ owner, repo, prNumber }, token) {
   if (!response.ok) {
     reviewButton.disabled = false;
     reviewButton.textContent = "Run Review";
-    console.error("Failed to fetch PR diffs:", response.status);
     showToast(`Failed to fetch PR diffs: ${response.status}`, 'error')
     return [];
   }
@@ -55,7 +54,6 @@ async function postPRComment(githubToken, prDetails, comment, position, file, co
 
   const data = await response.json();
   if (data.id) {
-    console.log(`Comment posted successfully at position ${position} in file ${file}`);
   } else {
     console.error('Failed to post comment:', data);
     reviewButton.disabled = false;
@@ -73,6 +71,5 @@ async function getPRCommitId(prDetails, githubToken) {
   });
 
   const prData = await response.json();
-  console.log('PR commit_id', prData)
   return prData.head.sha; // This returns the commit ID
 }
