@@ -47,7 +47,7 @@ RevueAI is a Chrome extension that enhances your GitHub pull request workflow by
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/revueai.git
+git clone https://github.com/Billmike/revueai.git
 
 # Navigate to the project directory
 cd revueai
