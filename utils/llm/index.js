@@ -86,6 +86,56 @@ async function analyzeDiffWithAnthropic(diffData, apiKey) {
   };
 }
 
+async function analayzeDiffWithGemini(diffData, apiKey) {
+  console.log("Sending PR diff to Gemini...");
+
+  const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
+
+  const response = await fetch(`${apiUrl}?key=${apiKey}`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      contents: [{
+        role: "user",
+        parts: [{
+          text: `You are a code review assistant. Provide brief, actionable suggestions for the following GitHub PR diff. Focus on the most important improvements needed. Keep suggestions concise and direct, with a maximum of 2-3 key points. Avoid lengthy explanations.
+
+          Here's the diff to review:
+          ${diffData}`
+        }]
+      }],
+      generationConfig: {
+        temperature: 0.2,
+        maxOutputTokens: 150,
+      }
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.error) {
+    return {
+      type: 'error',
+      content: `Error: ${data.error.message}`
+    };
+  }
+
+  // Check if we have a valid response with content
+  if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
+    return {
+      type: 'success',
+      content: data.candidates[0].content.parts[0].text
+    };
+  }
+
+  return {
+    type: 'error',
+    content: 'No suggestions received from Gemini.'
+  };
+}
+
 async function handleCallLLM(diffData) {
   const getLLMProvider = await getToken('llmProvider');
   const apiKey = await getToken('llmAPIKEY');
@@ -95,6 +145,8 @@ async function handleCallLLM(diffData) {
     suggestions = await analyzeDiffWithOpenAI(diffData, apiKey)
   } else if (getLLMProvider === 'anthropic') {
     suggestions = await analyzeDiffWithAnthropic(diffData, apiKey)
+  } else if (getLLMProvider === 'gemini') {
+    suggestions = await analayzeDiffWithGemini(diffData, apiKey)
   } else {
     suggestions = {
       type: 'error',
