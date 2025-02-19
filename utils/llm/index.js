@@ -41,7 +41,49 @@ async function analyzeDiffWithOpenAI(diffData, apiKey) {
 }
 
 async function analyzeDiffWithAnthropic(diffData, apiKey) {
+  console.log("Sending PR diff to Anthropic...");
 
+  const apiUrl = "https://api.anthropic.com/v1/messages";
+
+  const response = await fetch(apiUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": apiKey,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true",
+      "Access-Control-Allow-Origin": "*",
+      "Access-Control-Allow-Methods": "POST",
+      "Access-Control-Allow-Headers": "Content-Type, x-api-key, anthropic-version"
+    },
+    mode: "cors",
+    body: JSON.stringify({
+      model: "claude-3-opus-20240229",
+      messages: [{
+        role: "user",
+        content: `You are a code review assistant. Provide brief, actionable suggestions for the following GitHub PR diff. Focus on the most important improvements needed. Keep suggestions concise and direct, with a maximum of 2-3 key points. Avoid lengthy explanations.
+
+        Here's the diff to review:
+        ${diffData}`
+      }],
+      max_tokens: 150,
+      temperature: 0.2
+    }),
+  });
+
+  const data = await response.json();
+
+  if (data.error) {
+    return {
+      type: 'error',
+      content: `Error: ${data.error.message}`
+    };
+  }
+
+  return {
+    type: 'success',
+    content: data.content?.[0]?.text || "No suggestions."
+  };
 }
 
 async function handleCallLLM(diffData) {
@@ -51,7 +93,7 @@ async function handleCallLLM(diffData) {
 
   if (getLLMProvider === 'openai') {
     suggestions = await analyzeDiffWithOpenAI(diffData, apiKey)
-  } else if (getLLMProvider === '') {
+  } else if (getLLMProvider === 'anthropic') {
     suggestions = await analyzeDiffWithAnthropic(diffData, apiKey)
   } else {
     suggestions = {
