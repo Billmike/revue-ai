@@ -38,7 +38,7 @@ document.getElementById("run-review").addEventListener("click", async () => {
 
         try {
           // Analyze the diff using OpenAI
-          const suggestions = await analyzeDiffWithOpenAI(file.patch);
+          const suggestions = await handleCallLLM(file.patch);
           if (suggestions.type === 'error') {
             showToast(suggestions.content, 'error');
             return;

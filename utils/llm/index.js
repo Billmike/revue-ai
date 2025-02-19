@@ -1,6 +1,5 @@
-async function analyzeDiffWithOpenAI(diffData) {
+async function analyzeDiffWithOpenAI(diffData, apiKey) {
   console.log("Sending PR diff to OpenAI...");
-  const apiKey = await getToken('llmAPIKEY');
 
   const apiUrl = "https://api.openai.com/v1/chat/completions";
 
@@ -39,6 +38,29 @@ async function analyzeDiffWithOpenAI(diffData) {
     type: 'success',
     content: data.choices?.[0]?.message?.content || "No suggestions."
   };
+}
+
+async function analyzeDiffWithAnthropic(diffData, apiKey) {
+
+}
+
+async function handleCallLLM(diffData) {
+  const getLLMProvider = await getToken('llmProvider');
+  const apiKey = await getToken('llmAPIKEY');
+  let suggestions = {}
+
+  if (getLLMProvider === 'openai') {
+    suggestions = await analyzeDiffWithOpenAI(diffData, apiKey)
+  } else if (getLLMProvider === '') {
+    suggestions = await analyzeDiffWithAnthropic(diffData, apiKey)
+  } else {
+    suggestions = {
+      type: 'error',
+      content: 'Failed to connect to an LLM'
+    }
+  }
+
+  return suggestions
 }
 
 function extractChangesFromDiff(diffData) {
