@@ -32,6 +32,13 @@ document.getElementById("run-review").addEventListener("click", async () => {
      // Fetch the commit ID for the PR
      const commitId = await getPRCommitId(prDetails, githubToken);
 
+     // Track errors across all files
+     let hasLLMError = {
+      status: false,
+      errorMessage: ''
+     };
+     let hasProcessingError = false;
+
      // Process all files concurrently using Promise.all()
      await Promise.all(
       diffs.map(async (file) => {
@@ -40,7 +47,10 @@ document.getElementById("run-review").addEventListener("click", async () => {
           // Analyze the diff using OpenAI
           const suggestions = await handleCallLLM(file.patch);
           if (suggestions.type === 'error') {
-            showToast(suggestions.content, 'error');
+            hasLLMError = {
+              status: true,
+              errorMessage: suggestions.content
+            };
             return;
           }
 
@@ -53,11 +63,20 @@ document.getElementById("run-review").addEventListener("click", async () => {
             await postPRComment(githubToken, prDetails, suggestions.content, change.line, change.file, commitId);
           }
         } catch (error) {
-          console.error(`Error processing ${file.filename}:`, error);
+          hasProcessingError = true;
           showToast(`Error processing ${file.filename}:`)
         }
       })
     );
+
+    // Show error toast only once if any errors occurred
+    if (hasLLMError.status) {
+      showToast(hasLLMError.errorMessage, 'error');
+    } else if (hasProcessingError) {
+      showToast("Error processing one or more files.", 'error');
+    } else {
+      showToast("Review completed successfully!");
+    }
 
     // Re-enable button after review is done
     reviewButton.disabled = false;
