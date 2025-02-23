@@ -3,12 +3,26 @@ async function analyzeDiffWithOpenAI(diffData, apiKey) {
 
   const apiUrl = "https://api.openai.com/v1/chat/completions";
 
+  // Format the changes for the LLM
+  const formattedChanges = diffData.changeBlocks.map(block => {
+    const lineRange = block.startLine === block.endLine 
+      ? `line ${block.startLine}`
+      : `lines ${block.startLine}-${block.endLine}`;
+    
+    return `Changes at ${lineRange}:\n${block.changes.map(c => c.change).join('\n')}`;
+  }).join('\n\n');
+
   const messages = [
     { 
       role: "system", 
-      content: "You are a code review assistant. Provide brief, actionable suggestions for the following GitHub PR diff. Focus on the most important improvements needed. Keep suggestions concise and direct, with a maximum of 2-3 key points. Avoid lengthy explanations." 
+      content: `You are a code review assistant. Review the following code changes and provide specific feedback for each changed section. 
+      Format your response by referencing the line numbers for each piece of feedback.
+      Keep each suggestion concise and actionable. Focus on the most important improvements needed.
+      Example format:
+      "Lines 50-52: [Your specific feedback for these lines]
+      Line 84: [Your specific feedback for this line]"` 
     },
-    { role: "user", content: diffData }
+    { role: "user", content: formattedChanges }
   ];
 
   const response = await fetch(apiUrl, {
@@ -20,8 +34,8 @@ async function analyzeDiffWithOpenAI(diffData, apiKey) {
     body: JSON.stringify({
       model: "gpt-4-turbo",
       messages,
-      temperature: 0.2, // Lowered temperature for more focused responses
-      max_tokens: 150,  // Limit response length
+      temperature: 0.2,
+      max_tokens: 250, // Increased slightly to accommodate line references
     }),
   });
 
@@ -159,37 +173,64 @@ async function handleCallLLM(diffData) {
 
 function extractChangesFromDiff(diffData) {
   const changes = [];
+  const changeBlocks = [];
 
   diffData.forEach(file => {
     const patch = file.patch;
     const lines = patch.split("\n");
     let currentLine = 0;
-    let hunkStartLine = null;
+    let currentBlock = {
+      startLine: null,
+      endLine: null,
+      changes: []
+    };
 
     lines.forEach(line => {
       if (line.startsWith("@@")) {
         const match = line.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
         if (match) {
           currentLine = parseInt(match[1]);
-          hunkStartLine = currentLine;
+          if (currentBlock.changes.length > 0) {
+            changeBlocks.push({
+              ...currentBlock,
+              endLine: currentLine - 1
+            });
+          }
+          currentBlock = {
+            startLine: currentLine,
+            endLine: null,
+            changes: []
+          };
         }
       } else if (!line.startsWith("+++") && !line.startsWith("---")) {
-        // For added lines, record the change
         if (line.startsWith("+")) {
-          changes.push({
+          const change = {
             file: file.filename,
             line: currentLine,
             change: line.slice(1).trim(),
-          });
+          };
+          
+          changes.push(change);
+          currentBlock.changes.push(change);
           currentLine++;
         } 
-        // For context lines (space) and removed lines (-), just increment the counter
         else if (line.startsWith(" ") || line.startsWith("-")) {
           currentLine++;
         }
       }
     });
+
+    // Add the last block if it has changes
+    if (currentBlock.changes.length > 0) {
+      changeBlocks.push({
+        ...currentBlock,
+        endLine: currentLine
+      });
+    }
   });
 
-  return changes;
+  return {
+    firstChange: changes[0], // For posting the comment
+    changeBlocks: changeBlocks // For providing context to LLM
+  };
 }

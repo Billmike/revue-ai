@@ -44,24 +44,48 @@ document.getElementById("run-review").addEventListener("click", async () => {
       diffs.map(async (file) => {
 
         try {
-          // Analyze the diff using OpenAI
-          const suggestions = await handleCallLLM(file.patch);
-          if (suggestions.type === 'error') {
-            hasLLMError = {
-              status: true,
-              errorMessage: suggestions.content
-            };
-            return;
-          }
-
           // Extract relevant line changes
           const changes = extractChangesFromDiff([file]);
 
-          // Post comments only on the first added line per file
-          if (changes.length > 0) {
-            const change = changes[0]; // Get only the first added line per file
-            await postPRComment(githubToken, prDetails, suggestions.content, change.line, change.file, commitId);
+          if (changes.firstChange) {
+            const suggestions = await handleCallLLM({
+              patch: file.patch,
+              changeBlocks: changes.changeBlocks
+            });
+    
+            if (suggestions.type === 'error') {
+              hasLLMError = true;
+              return;
+            }
+    
+            // Post the comment on the first change
+            await postPRComment(
+              githubToken, 
+              prDetails, 
+              suggestions.content, 
+              changes.firstChange.line, 
+              changes.firstChange.file, 
+              commitId
+            );
           }
+
+          // Analyze the diff using OpenAI
+          // const suggestions = await handleCallLLM(file.patch);
+          // if (suggestions.type === 'error') {
+          //   hasLLMError = {
+          //     status: true,
+          //     errorMessage: suggestions.content
+          //   };
+          //   return;
+          // }
+
+          
+
+          // // Post comments only on the first added line per file
+          // if (changes.length > 0) {
+          //   const change = changes[0]; // Get only the first added line per file
+          //   await postPRComment(githubToken, prDetails, suggestions.content, change.line, change.file, commitId);
+          // }
         } catch (error) {
           hasProcessingError = true;
           showToast(`Error processing ${file.filename}:`)
