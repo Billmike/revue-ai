@@ -3,24 +3,30 @@ async function analyzeDiffWithOpenAI(diffData, apiKey) {
 
   const apiUrl = "https://api.openai.com/v1/chat/completions";
 
-  // Format the changes for the LLM
+  // Create a context that includes complete hunks rather than just changed lines
   const formattedChanges = diffData.changeBlocks.map(block => {
     const lineRange = block.startLine === block.endLine 
       ? `line ${block.startLine}`
       : `lines ${block.startLine}-${block.endLine}`;
     
-    return `Changes at ${lineRange}:\n${block.changes.map(c => c.change).join('\n')}`;
+    const changeLines = block.changes.map(c => 
+      `Line ${c.line}: ${c.change}`
+    ).join('\n');
+    
+    return `Changes in ${block.file}, ${lineRange}:\n${changeLines}`;
   }).join('\n\n');
 
   const messages = [
     { 
       role: "system", 
-      content: `You are a code review assistant. Review the following code changes and provide specific feedback for each changed section. 
-      Format your response by referencing the line numbers for each piece of feedback.
-      Keep each suggestion concise and actionable. Focus on the most important improvements needed.
+      content: `You are a code review assistant. Review the following code changes and provide specific feedback.
+      For each section of changes, reference the exact line numbers in your feedback.
+      Focus on potential issues, improvements, or security concerns in the changed code.
+      Keep suggestions concise, actionable, and to the point.
+      
       Example format:
-      "Lines 50-52: [Your specific feedback for these lines]
-      Line 84: [Your specific feedback for this line]"` 
+      "Lines 50-51: [Your specific feedback about these lines]
+      Line 60-61: [Your specific feedback about these lines]"` 
     },
     { role: "user", content: formattedChanges }
   ];
@@ -35,7 +41,7 @@ async function analyzeDiffWithOpenAI(diffData, apiKey) {
       model: "gpt-4-turbo",
       messages,
       temperature: 0.2,
-      max_tokens: 250, // Increased slightly to accommodate line references
+      max_tokens: 300, // Increased to accommodate multiple block references
     }),
   });
 
@@ -179,28 +185,29 @@ function extractChangesFromDiff(diffData) {
     const patch = file.patch;
     const lines = patch.split("\n");
     let currentLine = 0;
-    let currentBlock = {
-      startLine: null,
-      endLine: null,
-      changes: []
-    };
+    let currentHunk = [];
+    let hunkHeader = null;
 
     lines.forEach(line => {
       if (line.startsWith("@@")) {
+        // Parse hunk header to get correct line numbers
         const match = line.match(/@@ -\d+(?:,\d+)? \+(\d+)(?:,\d+)? @@/);
         if (match) {
-          currentLine = parseInt(match[1]);
-          if (currentBlock.changes.length > 0) {
+          // Process previous hunk if exists
+          if (currentHunk.length > 0 && hunkHeader) {
+            const blockStartLine = parseInt(hunkHeader);
             changeBlocks.push({
-              ...currentBlock,
-              endLine: currentLine - 1
+              startLine: blockStartLine,
+              endLine: blockStartLine + currentHunk.length - 1,
+              changes: currentHunk,
+              file: file.filename
             });
           }
-          currentBlock = {
-            startLine: currentLine,
-            endLine: null,
-            changes: []
-          };
+          
+          // Start new hunk
+          currentLine = parseInt(match[1]);
+          hunkHeader = match[1];
+          currentHunk = [];
         }
       } else if (!line.startsWith("+++") && !line.startsWith("---")) {
         if (line.startsWith("+")) {
@@ -211,26 +218,54 @@ function extractChangesFromDiff(diffData) {
           };
           
           changes.push(change);
-          currentBlock.changes.push(change);
+          currentHunk.push({
+            line: currentLine,
+            change: line.slice(1).trim()
+          });
           currentLine++;
         } 
-        else if (line.startsWith(" ") || line.startsWith("-")) {
+        else if (line.startsWith(" ")) {
+          // Just increment for context lines
           currentLine++;
+        } 
+        else if (line.startsWith("-")) {
+          // Don't increment for removed lines in the new file
+          // These don't affect the new file's line numbers
         }
       }
     });
 
-    // Add the last block if it has changes
-    if (currentBlock.changes.length > 0) {
+    // Add the last hunk if it exists
+    if (currentHunk.length > 0 && hunkHeader) {
+      const blockStartLine = parseInt(hunkHeader);
       changeBlocks.push({
-        ...currentBlock,
-        endLine: currentLine
+        startLine: blockStartLine,
+        endLine: blockStartLine + currentHunk.length - 1,
+        changes: currentHunk,
+        file: file.filename
       });
     }
   });
 
+  // Consolidate adjacent blocks for better review context
+  const mergedBlocks = [];
+  changeBlocks.forEach(block => {
+    if (block.changes.length === 0) return;
+    
+    // Find if there's an existing block close to this one
+    const lastBlock = mergedBlocks.length > 0 ? mergedBlocks[mergedBlocks.length - 1] : null;
+    if (lastBlock && 
+        lastBlock.file === block.file && 
+        block.startLine - lastBlock.endLine <= 5) { // Merge if blocks are within 5 lines
+      lastBlock.endLine = Math.max(lastBlock.endLine, block.endLine);
+      lastBlock.changes = [...lastBlock.changes, ...block.changes];
+    } else {
+      mergedBlocks.push({...block});
+    }
+  });
+
   return {
-    firstChange: changes[0], // For posting the comment
-    changeBlocks: changeBlocks // For providing context to LLM
+    firstChange: changes.length > 0 ? changes[0] : null,
+    changeBlocks: mergedBlocks
   };
 }

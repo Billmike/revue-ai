@@ -24,11 +24,11 @@ RevueAI is a Chrome extension that enhances your GitHub pull request workflow by
 
 ## ⚙️ Installation
 
-1. Install from the [link coming soon]
+1. Install from the [chrome store](https://chromewebstore.google.com/detail/eopnhkmpfhenpnmlnfibhceafplgfifj?utm_source=item-share-cp)
 2. Click the RevueAI icon in your Chrome toolbar
 3. Open Settings and enter your:
    - GitHub token
-   - OpenAI API key
+   - LLM API key
 4. Start using RevueAI on any GitHub pull request!
 
 ## 🔑 Token Setup
@@ -40,7 +40,7 @@ RevueAI is a Chrome extension that enhances your GitHub pull request workflow by
    - `pull_requests` (Read and write)
 
 ### LLM API Key
-1. Get your OpenAI API key
+1. Get your LLM API key
 2. Ensure you have sufficient credits/quota
 
 ## 🛠️ Development Setup
