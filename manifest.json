@@ -3,7 +3,7 @@
   "name": "RevueAI",
   "version": "1.1.0",
   "description": "AI-powered GitHub PR review tool",
-  "permissions": ["storage", "identity", "activeTab", "scripting"],
+  "permissions": ["storage", "activeTab"],
   "host_permissions": ["https://github.com/*", "https://api.anthropic.com/*"],
   "background": {
     "service_worker": "background.js"
