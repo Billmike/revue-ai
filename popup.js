@@ -69,23 +69,6 @@ document.getElementById("run-review").addEventListener("click", async () => {
             );
           }
 
-          // Analyze the diff using OpenAI
-          // const suggestions = await handleCallLLM(file.patch);
-          // if (suggestions.type === 'error') {
-          //   hasLLMError = {
-          //     status: true,
-          //     errorMessage: suggestions.content
-          //   };
-          //   return;
-          // }
-
-          
-
-          // // Post comments only on the first added line per file
-          // if (changes.length > 0) {
-          //   const change = changes[0]; // Get only the first added line per file
-          //   await postPRComment(githubToken, prDetails, suggestions.content, change.line, change.file, commitId);
-          // }
         } catch (error) {
           hasProcessingError = true;
           showToast(`Error processing ${file.filename}:`)

@@ -65,28 +65,45 @@ async function analyzeDiffWithAnthropic(diffData, apiKey) {
 
   const apiUrl = "https://api.anthropic.com/v1/messages";
 
+  // Format the changes for the LLM
+  const formattedChanges = diffData.changeBlocks.map(block => {
+    const lineRange = block.startLine === block.endLine 
+      ? `line ${block.startLine}`
+      : `lines ${block.startLine}-${block.endLine}`;
+    
+    const changeLines = block.changes.map(c => 
+      `Line ${c.line}: ${c.change}`
+    ).join('\n');
+    
+    return `Changes in ${block.file}, ${lineRange}:\n${changeLines}`;
+  }).join('\n\n');
+
   const response = await fetch(apiUrl, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "x-api-key": apiKey,
       "anthropic-version": "2023-06-01",
-      "anthropic-dangerous-direct-browser-access": "true",
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST",
-      "Access-Control-Allow-Headers": "Content-Type, x-api-key, anthropic-version"
+      "anthropic-dangerous-direct-browser-access": "true"
     },
     mode: "cors",
     body: JSON.stringify({
       model: "claude-3-opus-20240229",
       messages: [{
         role: "user",
-        content: `You are a code review assistant. Provide brief, actionable suggestions for the following GitHub PR diff. Focus on the most important improvements needed. Keep suggestions concise and direct, with a maximum of 2-3 key points. Avoid lengthy explanations.
-
-        Here's the diff to review:
-        ${diffData}`
+        content: `You are a code review assistant. Review the following code changes and provide specific feedback.
+        For each section of changes, reference the exact line numbers in your feedback.
+        Focus on potential issues, improvements, or security concerns in the changed code.
+        Keep suggestions concise, actionable, and to the point.
+        
+        Example format:
+        "Lines 50-51: [Your specific feedback about these lines]
+        Line 60-61: [Your specific feedback about these lines]"
+        
+        Here are the changes to review:
+        ${formattedChanges}`
       }],
-      max_tokens: 150,
+      max_tokens: 300,
       temperature: 0.2
     }),
   });
@@ -111,6 +128,19 @@ async function analayzeDiffWithGemini(diffData, apiKey) {
 
   const apiUrl = "https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent";
 
+  // Format the changes for the LLM
+  const formattedChanges = diffData.changeBlocks.map(block => {
+    const lineRange = block.startLine === block.endLine 
+      ? `line ${block.startLine}`
+      : `lines ${block.startLine}-${block.endLine}`;
+    
+    const changeLines = block.changes.map(c => 
+      `Line ${c.line}: ${c.change}`
+    ).join('\n');
+    
+    return `Changes in ${block.file}, ${lineRange}:\n${changeLines}`;
+  }).join('\n\n');
+
   const response = await fetch(`${apiUrl}?key=${apiKey}`, {
     method: "POST",
     headers: {
@@ -120,20 +150,29 @@ async function analayzeDiffWithGemini(diffData, apiKey) {
       contents: [{
         role: "user",
         parts: [{
-          text: `You are a code review assistant. Provide brief, actionable suggestions for the following GitHub PR diff. Focus on the most important improvements needed. Keep suggestions concise and direct, with a maximum of 2-3 key points. Avoid lengthy explanations.
-
-          Here's the diff to review:
-          ${diffData}`
+          text: `You are a code review assistant. Review the following code changes and provide specific feedback.
+          For each section of changes, reference the exact line numbers in your feedback.
+          Focus on potential issues, improvements, or security concerns in the changed code.
+          Keep suggestions concise, actionable, and to the point.
+          
+          Example format:
+          "Lines 50-51: [Your specific feedback about these lines]
+          Line 60-61: [Your specific feedback about these lines]"
+          
+          Here are the changes to review:
+          ${formattedChanges}`
         }]
       }],
       generationConfig: {
         temperature: 0.2,
-        maxOutputTokens: 150,
+        maxOutputTokens: 300,
       }
     }),
   });
 
   const data = await response.json();
+
+  console.log('the data', data)
 
   if (data.error) {
     return {
