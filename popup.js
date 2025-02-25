@@ -32,32 +32,58 @@ document.getElementById("run-review").addEventListener("click", async () => {
      // Fetch the commit ID for the PR
      const commitId = await getPRCommitId(prDetails, githubToken);
 
+     // Track errors across all files
+     let hasLLMError = {
+      status: false,
+      errorMessage: ''
+     };
+     let hasProcessingError = false;
+
      // Process all files concurrently using Promise.all()
      await Promise.all(
       diffs.map(async (file) => {
 
         try {
-          // Analyze the diff using OpenAI
-          const suggestions = await analyzeDiffWithOpenAI(file.patch);
-          if (suggestions.type === 'error') {
-            showToast(suggestions.content, 'error');
-            return;
-          }
-
           // Extract relevant line changes
           const changes = extractChangesFromDiff([file]);
 
-          // Post comments only on the first added line per file
-          if (changes.length > 0) {
-            const change = changes[0]; // Get only the first added line per file
-            await postPRComment(githubToken, prDetails, suggestions.content, change.line, change.file, commitId);
+          if (changes.firstChange) {
+            const suggestions = await handleCallLLM({
+              patch: file.patch,
+              changeBlocks: changes.changeBlocks
+            });
+    
+            if (suggestions.type === 'error') {
+              hasLLMError = true;
+              return;
+            }
+    
+            // Post the comment on the first change
+            await postPRComment(
+              githubToken, 
+              prDetails, 
+              suggestions.content, 
+              changes.firstChange.line, 
+              changes.firstChange.file, 
+              commitId
+            );
           }
+
         } catch (error) {
-          console.error(`Error processing ${file.filename}:`, error);
+          hasProcessingError = true;
           showToast(`Error processing ${file.filename}:`)
         }
       })
     );
+
+    // Show error toast only once if any errors occurred
+    if (hasLLMError.status) {
+      showToast(hasLLMError.errorMessage, 'error');
+    } else if (hasProcessingError) {
+      showToast("Error processing one or more files.", 'error');
+    } else {
+      showToast("Review completed successfully!");
+    }
 
     // Re-enable button after review is done
     reviewButton.disabled = false;
