@@ -4,12 +4,6 @@
   <p>AI-Powered Code Review Assistant for GitHub Pull Requests</p>
 </div>
 
-<div align="center">
-  <video autoplay loop muted playsinline width="800">
-    <source src="assets/demo.mp4" type="video/mp4">
-  </video>
-</div>
-
 ## 🚀 Features
 
 - 🤖 Automated code review suggestions using AI
